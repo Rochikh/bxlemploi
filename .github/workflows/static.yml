@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse Interactive du Marché de l'Emploi à Bruxelles-Capitale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- 
+        Background: #FAF7F5 (Warm off-white)
+        Card/Section Background: #FFFFFF (White)
+        Primary Text: #4A4A4A (Dark Gray)
+        Secondary Text/Subtle Elements: #7D7D7D (Medium Gray)
+        Primary Accent (charts, highlights): #A0522D (Sienna)
+        Secondary Accent (charts): #D2B48C (Tan)
+        Tertiary Accent (charts): #F5DEB3 (Wheat)
+    -->
+    <!-- 
+    Application Structure Plan:
+    The application is structured into thematic sections to guide the user through the key findings of the Brussels job market report.
+    1.  Accueil/Vue d'Ensemble: Key figures and navigation.
+    2.  Panorama du Marché: Core labor market indicators (employment, unemployment rates).
+    3.  Secteurs en Mouvement: Dominant and dynamic sectors, vacant positions.
+    4.  Nature de l'Emploi: Contract types and working conditions.
+    5.  Compétences Recherchées: In-demand hard and soft skills, critical functions.
+    6.  Rémunération à Bruxelles: Salary levels and influencing factors.
+    7.  Influences Externes & Défis: Economic context, regional policies, telework, challenges for job seekers and employers.
+    8.  Opportunités & Perspectives: Growth sectors and advice for job seekers.
+    This structure was chosen to provide a logical flow from general overview to specific details and future outlook, enhancing usability and understanding of the report's complex information.
+    -->
+    <!-- 
+    Visualization & Content Choices:
+    - Key Stats (Taux emploi/chômage): Goal: Inform. Viz: Large Text (HTML/Tailwind). Interaction: Visual. Justification: Quick overview. (NO SVG/Mermaid)
+    - Taux d'emploi/chômage comparatif: Goal: Compare. Viz: Bar Chart (Chart.js/Canvas). Interaction: Tooltips. Justification: Clear regional comparison. (NO SVG/Mermaid)
+    - Postes vacants par secteur: Goal: Compare/Inform. Viz: Horizontal Bar Chart (Chart.js/Canvas). Interaction: Tooltips. Justification: Readability for sector names. (NO SVG/Mermaid)
+    - Part des postes vacants belges à BXL (focus secteurs): Goal: Inform (Proportion). Viz: Donut Chart (Chart.js/Canvas). Interaction: Tooltips. Justification: Highlights Brussels' share in key national sectors. (NO SVG/Mermaid)
+    - Types de Contrats (National): Goal: Inform (Proportion). Viz: Pie Chart (Chart.js/Canvas). Interaction: Tooltips. Justification: Simple distribution. (NO SVG/Mermaid)
+    - Salaires Moyens/Médians (BXL vs National): Goal: Compare. Viz: Bar Chart (Chart.js/Canvas). Interaction: Tooltips. Justification: Direct salary comparison. (NO SVG/Mermaid)
+    - Télétravail (Part Salariés BXL): Goal: Inform (Proportion). Viz: Donut Chart (Chart.js/Canvas). Interaction: Tooltips. Justification: Shows telework prevalence. (NO SVG/Mermaid)
+    - Compétences, Défis, Opportunités: Goal: Inform/Organize. Viz: Styled HTML Lists (Unicode icons). Interaction: Readability. Justification: Clear textual presentation. (NO SVG/Mermaid)
+    All choices support the designed interactive structure and adhere to NO SVG/Mermaid constraints.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAF7F5; /* Warm off-white */
+            color: #4A4A4A; /* Dark Gray */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px; 
+            max-height: 450px;
+        }
+        @media (min-width: 768px) { /* md */
+            .chart-container {
+                height: 400px;
+                max-height: 500px;
+            }
+        }
+         .chart-container-sm { /* For smaller charts like pie/donut */
+            position: relative;
+            width: 100%;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; 
+            max-height: 350px;
+        }
+
+        .app-card {
+            background-color: #FFFFFF; /* White */
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03); /* Softer shadow */
+            padding: 1.5rem; /* p-6 */
+            margin-bottom: 2rem; /* mb-8 */
+        }
+        .app-title {
+            color: #A0522D; /* Sienna */
+        }
+        .section-title {
+            font-size: 1.75rem; /* text-2xl */
+            font-weight: 700; /* font-bold */
+            color: #A0522D; /* Sienna */
+            margin-bottom: 1.5rem; /* mb-6 */
+            padding-bottom: 0.75rem; /* pb-3 */
+            border-bottom: 2px solid #D2B48C; /* Tan */
+            text-align: center;
+        }
+        .nav-button {
+            background-color: #A0522D; /* Sienna */
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 0.5rem; /* rounded-md */
+            transition: background-color 0.3s ease-in-out;
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600; /* font-semibold */
+        }
+        .nav-button:hover {
+            background-color: #804224; /* Darker Sienna */
+        }
+        .sticky-nav {
+            position: -webkit-sticky; /* Safari */
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background-color: rgba(250, 247, 245, 0.95); /* Warm off-white with opacity */
+            backdrop-filter: blur(8px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .stat-value {
+            font-size: 2.5rem; /* text-4xl */
+            font-weight: 700; /* font-bold */
+            color: #A0522D; /* Sienna */
+        }
+        .stat-label {
+            font-size: 0.875rem; /* text-sm */
+            color: #7D7D7D; /* Medium Gray */
+            margin-top: 0.25rem; /* mt-1 */
+        }
+        .icon-list li::before {
+            content: "🔸"; /* Unicode for a small diamond or bullet */
+            margin-right: 0.75rem;
+            color: #A0522D; /* Sienna */
+        }
+        .intro-text {
+            color: #4A4A4A;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <nav class="sticky-nav py-3 px-4 md:px-6">
+        <div class="container mx-auto flex flex-wrap justify-center items-center gap-2 md:gap-3">
+            <a href="#accueil" class="nav-button">Accueil</a>
+            <a href="#panorama" class="nav-button">Panorama</a>
+            <a href="#secteurs" class="nav-button">Secteurs</a>
+            <a href="#nature-emploi" class="nav-button">Nature Emploi</a>
+            <a href="#competences" class="nav-button">Compétences</a>
+            <a href="#remuneration" class="nav-button">Rémunération</a>
+            <a href="#influences-defis" class="nav-button">Influences & Défis</a>
+            <a href="#opportunites" class="nav-button">Opportunités</a>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header id="accueil" class="text-center py-10 md:py-16 scroll-mt-20">
+            <h1 class="text-4xl md:text-5xl font-bold mb-6 app-title">Marché de l'Emploi à Bruxelles-Capitale</h1>
+            <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto">
+                Explorez les dynamiques, tendances et perspectives du marché du travail bruxellois à travers cette analyse interactive. Ce portail vise à synthétiser les informations clés du rapport "Étude Approfondie du Marché de l'Emploi en Région de Bruxelles-Capitale" pour une meilleure compréhension des enjeux actuels.
+            </p>
+        </header>
+
+        <section class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12 app-card">
+            <div class="text-center p-4">
+                <div class="stat-value">64,1%</div>
+                <div class="stat-label">Taux d'emploi (20-64 ans, 2024)</div>
+                <p class="text-xs text-gray-500 mt-1">Source: Statbel (Rapport Table 2)</p>
+            </div>
+            <div class="text-center p-4">
+                <div class="stat-value">11,9%</div>
+                <div class="stat-label">Taux de chômage (15-64 ans, 2024)</div>
+                <p class="text-xs text-gray-500 mt-1">Source: Statbel (Rapport Table 2)</p>
+            </div>
+        </section>
+
+        <section id="panorama" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Panorama du Marché : Indicateurs Clés</h2>
+            <p class="intro-text text-center">Cette section offre une vue d'ensemble de la santé du marché du travail bruxellois en comparant les principaux indicateurs (taux d'emploi, de chômage et d'activité) avec les autres régions belges et la moyenne nationale pour l'année 2024. Ces chiffres, issus de Statbel, permettent de situer la performance de Bruxelles dans le contexte national.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Taux d'Emploi Comparatif (20-64 ans, 2024)</h3>
+                    <div class="chart-container">
+                        <canvas id="tauxEmploiChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Source: Statbel (Rapport Table 2)</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Taux de Chômage Comparatif (15-64 ans, 2024)</h3>
+                    <div class="chart-container">
+                        <canvas id="tauxChomageChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Source: Statbel (Rapport Table 2)</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="secteurs" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Secteurs en Mouvement</h2>
+            <p class="intro-text text-center">La structure économique de Bruxelles, fortement tertiarisée, engendre une demande de main-d'œuvre concentrée dans des secteurs spécifiques. Cette section met en lumière les secteurs les plus dynamiques en termes de postes vacants (données T4 2024 de Statbel), soulignant l'importance du non-marchand, des sciences et services, et des TIC.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Postes Vacants par Secteur à Bruxelles (T4 2024, x1000)</h3>
+                    <div class="chart-container h-[500px] max-h-[600px]">
+                        <canvas id="postesVacantsChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Source: Statbel (Rapport Table 1)</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Part des Postes Vacants Belges à Bruxelles (T4 2024, Secteurs Clés)</h3>
+                     <p class="text-sm text-gray-600 mb-4 text-center">Bruxelles concentre une part importante des emplois à pourvoir au niveau national dans certains secteurs stratégiques.</p>
+                    <div class="chart-container-sm">
+                        <canvas id="proportionPostesVacantsChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Source: Statbel (Rapport Table 1)</p>
+                </div>
+            </div>
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold mb-3 text-gray-700">Focus sur l'Emploi Ouvrier</h3>
+                <p class="text-sm text-gray-600">Le marché de l'emploi ouvrier à Bruxelles a connu une profonde mutation, avec une tertiarisation marquée. Les services administratifs et de soutien (notamment le nettoyage), l'Horeca, et les transports et entreposage concentrent l'essentiel de cet emploi. En revanche, la construction et l'industrie manufacturière ont vu leur nombre d'emplois ouvriers décliner. (Source: Rapport I. Focus spécifique)</p>
+            </div>
+        </section>
+
+        <section id="nature-emploi" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Nature de l'Emploi : Contrats et Conditions</h2>
+            <p class="intro-text text-center">Cette section examine l'évolution des types de contrats et des conditions de travail à Bruxelles. Elle s'appuie sur les données de Statbel et de l'IBSA pour analyser la répartition entre contrats permanents et temporaires, la part des indépendants, et l'évolution du temps partiel, offrant un aperçu de la stabilité et de la flexibilité de l'emploi.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Types de Contrats (National, T4 2024)</h3>
+                    <div class="chart-container-sm">
+                        <canvas id="typesContratsChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Source: Statbel (Rapport II. Évolution)</p>
+                </div>
+                <div class="text-gray-700">
+                    <h3 class="text-xl font-semibold mb-4 text-center">Tendances à Bruxelles (2021-2023)</h3>
+                    <ul class="space-y-3 text-sm icon-list">
+                        <li><span class="font-semibold">Contrats temporaires :</span> 14,5% des Bruxellois en emploi (en légère baisse).</li>
+                        <li><span class="font-semibold">Indépendants/Freelances :</span> Part stable autour de 16%.</li>
+                        <li><span class="font-semibold">Temps partiel :</span> 20,1% des Bruxellois en emploi (en baisse).</li>
+                    </ul>
+                    <p class="text-xs text-gray-500 mt-3">Source: IBSA, Focus n°68 (Rapport Table 3)</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="competences" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Compétences Recherchées</h2>
+            <p class="intro-text text-center">L'adéquation des compétences est un enjeu majeur. Cette section détaille les compétences techniques (hard skills) et non-techniques (soft skills) les plus demandées par les employeurs bruxellois, ainsi qu'une analyse des "fonctions critiques" où les difficultés de recrutement sont particulièrement marquées.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold mb-4 text-center text-gray-700">Compétences Techniques (Hard Skills)</h3>
+                    <ul class="space-y-2 text-sm text-gray-600 icon-list">
+                        <li>Numérique/ICT (Développement, Réseaux, Data, Cybersécurité)</li>
+                        <li>Construction (Lecture de plans, Électricité, HVAC, DAO)</li>
+                        <li>Santé et Soins (Soins infirmiers, Aide aux personnes)</li>
+                        <li>Technique Industrielle (Électromécanique, Maintenance)</li>
+                        <li>Finance & Comptabilité (Analyse, Reporting, Budgeting)</li>
+                        <li>Métiers Verts (Normes environnementales, Rénovation énergétique)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4 text-center text-gray-700">Compétences Non-Techniques (Soft Skills)</h3>
+                    <ul class="space-y-2 text-sm text-gray-600 icon-list">
+                        <li>Linguistiques (Français, Néerlandais, Anglais)</li>
+                        <li>Adaptabilité & Flexibilité</li>
+                        <li>Capacité d'apprentissage continu</li>
+                        <li>Communication & Résolution de problèmes</li>
+                        <li>Autonomie & Organisation</li>
+                        <li>Créativité & Esprit critique</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Fonctions Critiques</h3>
+                <p class="text-sm text-gray-600 text-center">Actiris a identifié <span class="font-bold text-[#A0522D]">102 fonctions critiques</span> en 2024. Les difficultés de recrutement s'expliquent par une pénurie de candidats, des qualifications inadéquates (formation, expérience, langues), ou des conditions de travail jugées difficiles. (Source: Rapport III. Analyse)</p>
+            </div>
+        </section>
+
+        <section id="remuneration" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Rémunération à Bruxelles</h2>
+            <p class="intro-text text-center">Bruxelles se distingue par les salaires les plus élevés de Belgique. Cette section compare les salaires moyens et médians avec la moyenne nationale et aborde les facteurs influençant la rémunération, tels que le niveau d'études et le secteur d'activité.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Salaires Mensuels Bruts Moyens (Temps plein, 2022)</h3>
+                    <div class="chart-container">
+                        <canvas id="salairesMoyensChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Source: Statbel (Rapport Table 5)</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-3 text-center text-gray-700">Salaires Mensuels Bruts Médians (Temps plein)</h3>
+                    <div class="chart-container">
+                        <canvas id="salairesMediansChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">Sources: SD Worx (BXL Privé Jan 2025), Statbel (National 2022) (Rapport Table 5)</p>
+                </div>
+            </div>
+             <p class="text-sm text-gray-600 mt-6">Les niveaux de rémunération sont influencés par le niveau d'études, l'âge/expérience, le secteur d'activité, et le genre. L'indexation automatique des salaires joue également un rôle important. (Source: Rapport IV)</p>
+        </section>
+
+        <section id="influences-defis" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Influences Externes & Défis du Marché</h2>
+            <p class="intro-text text-center">Le marché de l'emploi bruxellois est façonné par divers facteurs externes et défis structurels. Cette section explore l'impact de la conjoncture économique, des politiques régionales, et de l'évolution du télétravail, ainsi que les difficultés spécifiques rencontrées par les demandeurs d'emploi et les employeurs, y compris le "Paradoxe Bruxellois".</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-lg mb-2 text-gray-700">Situation Économique</h4>
+                    <p class="text-sm text-gray-600">Croissance PIB BE 2023: +1,4%. Prévisions 2024: +1,1%. Inflation en baisse. Le secteur des services reste moteur.</p>
+                     <p class="text-xs text-gray-500 mt-1">Source: Rapport V</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <h4 class="font-semibold text-lg mb-2 text-gray-700">Politiques Régionales</h4>
+                    <p class="text-sm text-gray-600">Stratégie Go4Brussels 2030, Actiris, Bruxelles Formation visent à dynamiser l'emploi et l'adéquation des compétences.</p>
+                    <p class="text-xs text-gray-500 mt-1">Source: Rapport V</p>
+                </div>
+                <div class="p-4 border border-gray-200 rounded-lg md:col-span-2 lg:col-span-1">
+                    <h4 class="font-semibold text-lg mb-2 text-center text-gray-700">Télétravail (Salariés résidant BXL, 2022)</h4>
+                    <div class="chart-container-sm mx-auto h-[200px] max-w-[250px]">
+                        <canvas id="teletravailChart"></canvas>
+                    </div>
+                    <p class="text-sm text-gray-600 text-center mt-2">44% des postes salariés à BXL potentiellement télétravaillables.</p>
+                    <p class="text-xs text-gray-500 mt-1 text-center">Source: IBSA, Statbel (Rapport V)</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-semibold mb-4 text-center text-gray-700">Défis pour les Demandeurs d'Emploi</h3>
+                    <ul class="space-y-2 text-sm text-gray-600 icon-list">
+                        <li>Chômage persistant (jeunes, peu qualifiés).</li>
+                        <li>Inadéquation des qualifications.</li>
+                        <li>Barrières linguistiques.</li>
+                        <li>Discrimination à l'embauche.</li>
+                        <li>Accès à l'accompagnement et formation.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold mb-4 text-center text-gray-700">Défis pour les Employeurs</h3>
+                    <ul class="space-y-2 text-sm text-gray-600 icon-list">
+                        <li>Pénuries de talents (72% des employeurs belges).</li>
+                        <li>Coûts salariaux (indexation).</li>
+                        <li>Réglementation du travail.</li>
+                        <li>Concurrence pour les talents.</li>
+                        <li>Inadéquation des compétences locales.</li>
+                    </ul>
+                </div>
+            </div>
+             <div class="mt-8 p-4 bg-amber-50 rounded-lg">
+                <h4 class="font-semibold text-lg mb-2 text-[#A0522D]">Le "Paradoxe Bruxellois"</h4>
+                <p class="text-sm text-gray-700">Un chômage élevé coexiste avec d'importantes pénuries de main-d'œuvre. Cela souligne un décalage entre l'offre (compétences des demandeurs) et la demande (besoins des employeurs), ainsi que des questions de conditions de travail et d'information. (Source: Rapport VI)</p>
+            </div>
+        </section>
+
+        <section id="opportunites" class="mb-12 scroll-mt-20 app-card">
+            <h2 class="section-title">Opportunités & Perspectives</h2>
+            <p class="intro-text text-center">Malgré les défis, le marché bruxellois offre des opportunités, surtout pour ceux qui s'adaptent et se forment. Cette section met en avant les secteurs porteurs et les stratégies clés pour les demandeurs d'emploi, basées sur l'analyse des besoins actuels et futurs du marché.</p>
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-center text-gray-700">Secteurs et Métiers Porteurs</h3>
+                <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm text-gray-600 icon-list">
+                    <li>TIC / Numérique</li>
+                    <li>Santé et action sociale</li>
+                    <li>Construction qualifiée</li>
+                    <li>Technique et ingénierie</li>
+                    <li>Métiers de la transition écologique</li>
+                    <li>Enseignement</li>
+                    <li>Logistique et transport</li>
+                    <li>Services aux entreprises</li>
+                    <li>Horeca</li>
+                </ul>
+            </div>
+            <div class="mt-8 pt-6 border-t border-gray-200">
+                <h4 class="text-lg font-semibold mb-3 text-center text-gray-700">Clés du Succès pour les Demandeurs d'Emploi</h4>
+                <ul class="space-y-2 text-sm text-gray-600 icon-list max-w-2xl mx-auto">
+                    <li>S'engager dans la formation et la requalification continues.</li>
+                    <li>Valoriser et développer les compétences linguistiques (FR, NL, EN).</li>
+                    <li>Utiliser activement les aides et l'accompagnement (Actiris, Bruxelles Formation).</li>
+                    <li>Considérer la mobilité interrégionale pour élargir les horizons.</li>
+                </ul>
+            </div>
+            <p class="text-sm text-gray-600 mt-6 text-center">La clé réside dans l'acquisition de compétences en adéquation avec les besoins réels des employeurs. (Source: Rapport VII)</p>
+        </section>
+
+        <footer class="text-center py-8 mt-10 border-t border-gray-300">
+            <p class="text-sm text-gray-600">&copy; <span id="currentYear"></span> Analyse Interactive du Marché de l'Emploi Bruxellois.</p>
+            <p class="text-xs text-gray-500 mt-1">Basé sur "Étude Approfondie du Marché de l'Emploi en Région de Bruxelles-Capitale".</p>
+        </footer>
+    </div>
+
+<script>
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+    const primaryAccent = '#A0522D'; // Sienna
+    const secondaryAccent = '#D2B48C'; // Tan
+    const tertiaryAccent = '#F5DEB3'; // Wheat
+    const textColor = '#4A4A4A'; // Dark Gray
+    const gridColor = '#E5E7EB'; // Light Gray for grids
+
+    function wrapLabel(label, maxLength = 16) {
+        if (typeof label !== 'string' || label.length <= maxLength) return label;
+        const words = label.split(' ');
+        const lines = [];
+        let currentLine = '';
+        words.forEach(word => {
+            if ((currentLine + word).length > maxLength && currentLine.length > 0) {
+                lines.push(currentLine.trim());
+                currentLine = word + ' ';
+            } else {
+                currentLine += word + ' ';
+            }
+        });
+        lines.push(currentLine.trim());
+        return lines;
+    }
+    
+    const tooltipTitleCallback = function(tooltipItems) {
+        const item = tooltipItems[0];
+        let label = item.chart.data.labels[item.dataIndex];
+        return Array.isArray(label) ? label.join(' ') : label;
+    };
+
+    const commonChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: textColor, font: { size: 12 } } },
+            tooltip: {
+                callbacks: { title: tooltipTitleCallback },
+                backgroundColor: 'rgba(74, 74, 74, 0.9)', // Dark Gray with opacity
+                titleColor: '#FFFFFF', bodyColor: '#FFFFFF',
+                titleFont: { size: 13 }, bodyFont: { size: 12 }
+            }
+        },
+        scales: {
+            x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+            y: { ticks: { color: textColor, font: { size: 11 } }, grid: { color: gridColor, drawBorder: false } }
+        }
+    };
+    
+    const commonPieDonutOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: { color: textColor, font: { size: 11 }, padding: 15, usePointStyle: true, pointStyle: 'circle' }
+            },
+            tooltip: {
+                callbacks: {
+                    title: (tooltipItems) => tooltipItems[0].label,
+                    label: (context) => {
+                        let label = context.dataset.label || '';
+                        if (label) label += ': ';
+                        if (context.parsed !== null) label += context.parsed + (context.chart.config.type === 'pie' || context.chart.config.type === 'doughnut' ? '%' : '');
+                        return label;
+                    }
+                },
+                backgroundColor: 'rgba(74, 74, 74, 0.9)',
+                titleColor: '#FFFFFF', bodyColor: '#FFFFFF',
+                titleFont: { size: 13 }, bodyFont: { size: 12 }
+            }
+        }
+    };
+
+    // Taux d'Emploi
+    const tauxEmploiCtx = document.getElementById('tauxEmploiChart')?.getContext('2d');
+    if (tauxEmploiCtx) new Chart(tauxEmploiCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Bruxelles', 'Flandre', 'Wallonie', 'Belgique'],
+            datasets: [{
+                label: "Taux d'emploi (20-64 ans, 2024)",
+                data: [64.1, 76.9, 67.1, 72.3],
+                backgroundColor: [secondaryAccent, primaryAccent, tertiaryAccent, '#BDB76B'], // DarkKhaki as 4th color
+            }]
+        },
+        options: {...commonChartOptions, scales: {...commonChartOptions.scales, y: {...commonChartOptions.scales.y, suggestedMin: 50, suggestedMax: 80}}}
+    });
+
+    // Taux de Chômage
+    const tauxChomageCtx = document.getElementById('tauxChomageChart')?.getContext('2d');
+    if (tauxChomageCtx) new Chart(tauxChomageCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Bruxelles', 'Flandre', 'Wallonie', 'Belgique'],
+            datasets: [{
+                label: "Taux de chômage (15-64 ans, 2024)",
+                data: [11.9, 3.8, 7.5, 5.8],
+                backgroundColor: [secondaryAccent, primaryAccent, tertiaryAccent, '#BDB76B'],
+            }]
+        },
+        options: {...commonChartOptions, scales: {...commonChartOptions.scales, y: {...commonChartOptions.scales.y, suggestedMax: 15}}}
+    });
+
+    // Postes Vacants par Secteur
+    const postesVacantsCtx = document.getElementById('postesVacantsChart')?.getContext('2d');
+    if (postesVacantsCtx) new Chart(postesVacantsCtx, {
+        type: 'bar', // Horizontal bar is achieved by setting indexAxis: 'y'
+        data: {
+            labels: [
+                wrapLabel('Non marchand (O-Q)'), wrapLabel('Sciences et services (M-N)'), wrapLabel('Commerce (G)'),
+                wrapLabel('TIC (J)'), wrapLabel('Transport (H)'), wrapLabel('Autres services (R-S)'),
+                wrapLabel('Finance et assurance (K)'), wrapLabel('Construction (F)'), wrapLabel('Industrie (B-E)'),
+                wrapLabel('Horeca (I)'), wrapLabel('Activités immobilières (L)')
+            ].reverse(), // Reverse for horizontal bar to show largest at top
+            datasets: [{
+                label: 'Postes Vacants (x1.000)',
+                data: [7.1, 3.7, 2.1, 2.0, 1.6, 1.3, 1.3, 0.7, 0.6, 0.6, 0.1].reverse(),
+                backgroundColor: primaryAccent,
+            }]
+        },
+        options: { ...commonChartOptions, indexAxis: 'y', scales: {...commonChartOptions.scales, x: {...commonChartOptions.scales.x, suggestedMax: 8}} }
+    });
+
+    // Proportion des Postes Vacants Belges à Bruxelles (Focus)
+    const proportionPostesVacantsCtx = document.getElementById('proportionPostesVacantsChart')?.getContext('2d');
+    if (proportionPostesVacantsCtx) new Chart(proportionPostesVacantsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [wrapLabel('Finance (K)'), wrapLabel('Autres services (R-S)'), wrapLabel('TIC (J)'), wrapLabel('Non marchand (O-Q)')],
+            datasets: [{
+                label: 'Part des postes vacants belges à Bruxelles (%)',
+                data: [39.0, 31.0, 30.6, 17.0],
+                backgroundColor: [primaryAccent, secondaryAccent, tertiaryAccent, '#C08497'], // Added a fourth color
+                hoverOffset: 4
+            }]
+        },
+        options: commonPieDonutOptions
+    });
+
+    // Types de Contrats (National)
+    const typesContratsCtx = document.getElementById('typesContratsChart')?.getContext('2d');
+    if (typesContratsCtx) new Chart(typesContratsCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Postes Fixes', "Postes d'Intérim"],
+            datasets: [{ data: [87.4, 12.6], backgroundColor: [primaryAccent, secondaryAccent], hoverOffset: 4 }]
+        },
+        options: commonPieDonutOptions
+    });
+    
+    // Salaires Moyens
+    const salairesMoyensCtx = document.getElementById('salairesMoyensChart')?.getContext('2d');
+    if (salairesMoyensCtx) new Chart(salairesMoyensCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Bruxelles', 'Moy. Nationale'],
+            datasets: [{
+                label: 'Salaire Mensuel Brut Moyen (€, 2022)',
+                data: [4748, 4076],
+                backgroundColor: [primaryAccent, secondaryAccent],
+            }]
+        },
+        options: {...commonChartOptions, scales: {...commonChartOptions.scales, y: {...commonChartOptions.scales.y, suggestedMin: 3000}}}
+    });
+
+    // Salaires Médians
+    const salairesMediansCtx = document.getElementById('salairesMediansChart')?.getContext('2d');
+    if (salairesMediansCtx) new Chart(salairesMediansCtx, {
+        type: 'bar',
+        data: {
+            labels: [wrapLabel('Bruxelles (Privé Jan 2025)'), wrapLabel('National (2022)')],
+            datasets: [{
+                label: 'Salaire Mensuel Brut Médian (€)',
+                data: [3970, 3728],
+                backgroundColor: [primaryAccent, secondaryAccent],
+            }]
+        },
+        options: {...commonChartOptions, scales: {...commonChartOptions.scales, y: {...commonChartOptions.scales.y, suggestedMin: 3000}}}
+    });
+
+    // Télétravail
+    const teletravailCtx = document.getElementById('teletravailChart')?.getContext('2d');
+    if (teletravailCtx) new Chart(teletravailCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Télétravail Effectif (Salariés résid. BXL, 2022)', 'Autres'],
+            datasets: [{ data: [43, 57], backgroundColor: [primaryAccent, tertiaryAccent], hoverOffset: 4 }]
+        },
+        options: commonPieDonutOptions
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+</script>
+</body>
+</html>
